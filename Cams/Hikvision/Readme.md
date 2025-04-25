@@ -3,7 +3,7 @@
 Режим snapshot
 
 ```bash
-python camera_tool.py snapshot -f cameras.txt
+python hikvision_web_snapshots.py snapshot -f cameras.txt
   -h, --help
   -f, --file Файл с комбинациями в формате ip,port,login,password
 
