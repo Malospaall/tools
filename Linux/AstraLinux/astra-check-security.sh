@@ -24,7 +24,7 @@ else
     echo "НЕАКТИВНО"
 fi
 
-echo -n "   Уровень целостности (parsec.max_ilev): "
+echo -n "   Максимальный уровень целостности: "
 if [ ! -r /proc/cmdline ]; then
     echo "ОТКАЗАНО В ДОСТУПЕ"
 else
@@ -37,7 +37,7 @@ else
 fi
 
 # astra-ilev1-control
-echo -n "   Контроль уровня целостности 1: "
+echo -n "   Первый уровень целостности для сетевых служб: "
 if systemctl cat exim4.service 2>/dev/null | grep -q "/etc/systemd/system/exim4.service.d/ilev1.conf"; then
     echo "АКТИВНО"
 else
@@ -52,6 +52,109 @@ elif grep -q "parsec.strict_mode=" /proc/cmdline; then
     echo "АКТИВНО"
 else
     echo "НЕАКТИВНО"
+fi
+
+# set-fs-ilev status -v
+# pdpl-file <file>
+echo "   Защита файловой системы (занимает некоторое время):"
+
+if ! command -v /usr/sbin/pdpl-file &> /dev/null; then
+    echo "   ОШИБКА: Команда pdpl-file не найдена"
+    exit 1
+fi
+
+if [ ! -r /etc/parsec/fs-ilev.conf ]; then
+    echo "   ОТКАЗАНО В ДОСТУПЕ к /etc/parsec/fs-ilev.conf"
+    exit 1
+fi
+
+max_ilev=$(grep -o "parsec.max_ilev=[0-9]*" /proc/cmdline 2>/dev/null | cut -d= -f2)
+[ -z "$max_ilev" ] && max_ilev=63
+
+is_excluded() {
+    local path="$1"
+    if [[ "$path" == "/usr/share" || "$path" == "/usr/share/"* ]]; then
+        return 0
+    fi
+
+    while IFS= read -r line; do
+        [[ "$line" =~ ^[[:space:]]*# || -z "$line" ]] && continue
+
+        if [[ "$line" =~ ^exc[[:space:]]+([^[:space:]]+) ]]; then
+            local pattern="${BASH_REMATCH[1]}"
+            pattern="${pattern//\*/.*}"
+            if [[ "$path" =~ $pattern ]]; then
+                return 0
+            fi
+        fi
+    done < /etc/parsec/fs-ilev.conf
+    return 1
+}
+
+get_required_level() {
+    local path="$1"
+    while IFS= read -r line; do
+        [[ "$line" =~ ^[[:space:]]*# || -z "$line" ]] && continue
+
+        if [[ "$line" =~ ^[^[:space:]]+[[:space:]]+([^[:space:]]+) ]]; then
+            local config_path="${BASH_REMATCH[1]}"
+            if [[ "$path" == "$config_path" || "$path" == "$config_path"/* ]]; then
+                if [[ "$line" =~ ^(max|high)[[:space:]] ]]; then
+                    echo "Высокий"
+                    return
+                elif [[ "$line" =~ ^(min|low)[[:space:]] ]]; then
+                    echo "Низкий"
+                    return
+                elif [[ "$line" =~ ^([0-9]+)[[:space:]] ]]; then
+                    local ilev="${BASH_REMATCH[1]}"
+                    if [ "$ilev" -ge "$max_ilev" ]; then
+                        echo "Высокий"
+                    else
+                        echo "Низкий"
+                    fi
+                    return
+                fi
+            fi
+        fi
+    done < /etc/parsec/fs-ilev.conf
+    echo "Не определен"
+}
+
+found_issues=0
+while IFS= read -r line; do
+    [[ "$line" =~ ^[[:space:]]*# || -z "$line" ]] && continue
+    [[ "$line" =~ ^exc[[:space:]] ]] && continue
+
+    if [[ "$line" =~ ^[^[:space:]]+[[:space:]]+([^[:space:]]+) ]]; then
+        path="${BASH_REMATCH[1]}"
+
+        [ ! -e "$path" ] && continue
+
+        required_level=$(get_required_level "$path")
+        [ "$required_level" == "Не определен" ] && continue
+
+        while IFS= read -r -d '' file; do
+            if ! is_excluded "$file"; then
+                current_level=$(/usr/sbin/pdpl-file "$file" 2>/dev/null | awk -F: '{print $2}')
+                if [ "$current_level" != "$required_level" ]; then
+                    echo "      запрошен: $required_level    установлен: $current_level    $file"
+                    ((found_issues++))
+                fi
+            fi
+        done < <(find "$path" -type f -print0 2>/dev/null)
+
+        if ! is_excluded "$path"; then
+            current_level=$(/usr/sbin/pdpl-file "$path" 2>/dev/null | awk -F: '{print $2}')
+            if [ "$current_level" != "$required_level" ]; then
+                echo "      запрошен: $required_level    установлен: $current_level    $path"
+                ((found_issues++))
+            fi
+        fi
+    fi
+done < /etc/parsec/fs-ilev.conf
+
+if [ "$found_issues" -eq 0 ]; then
+    echo "      Все проверенные файлы имеют корректный уровень целостности"
 fi
 
 echo
@@ -111,7 +214,7 @@ fi
 
 echo
 
-# Очистка освобождаемой внешней памяти
+# Очистка разделов подкачки
 # astra-swapwiper-control
 echo -n "5. Очистка разделов подкачки: "
 if [ ! -r /etc/parsec/swap_wiper.conf ]; then
@@ -694,3 +797,35 @@ echo
 # Блокировка клавиш SysRq
 # astra-sysrq-lock
 echo -n "30. Блокировка клавиш SysRq: " && [ $(cat /proc/sys/kernel/sysrq) -eq 0 ] && echo "АКТИВНО" || echo "НЕАКТИВНО"
+
+echo
+
+# Поиск файлов с атрибутом silev (позволяет повысить уровень целостности)
+# /usr/bin/pdp-ls -M </path/to/file>
+echo "31. Поиск файлов с атрибутом silev (занимает некоторое время): "
+if ! command -v /usr/sbin/pdpl-file &>/dev/null; then
+    echo "НЕ НАЙДЕНА КОМАНДА pdpl-file"
+    exit 1
+fi
+
+SEARCH_PATH="/"
+EXCLUDE_PATHS="^/proc|^/sys|^/dev|^/run|^/snap|^/tmp|^/mnt|^/media"
+
+FOUND=0
+
+find "$SEARCH_PATH" -type f -readable -print0 2>/dev/null |
+while IFS= read -r -d '' file; do
+    if [[ "$file" =~ $EXCLUDE_PATHS ]]; then
+        continue
+    fi
+
+    output=$(/usr/sbin/pdpl-file "$file" 2>/dev/null)
+    if echo "$output" | grep -q 'silev'; then
+        echo "      $file: $output"
+        FOUND=1
+    fi
+done
+
+if [ "$FOUND" -eq 0 ]; then
+    echo "НЕ ОБНАРУЖЕНО"
+fi
