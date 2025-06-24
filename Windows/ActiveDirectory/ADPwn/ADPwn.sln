@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ADPwn", "ADPwn\ADPwn.csproj", "{05443D38-C604-4B31-A085-51DB73DB657B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{05443D38-C604-4B31-A085-51DB73DB657B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05443D38-C604-4B31-A085-51DB73DB657B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05443D38-C604-4B31-A085-51DB73DB657B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05443D38-C604-4B31-A085-51DB73DB657B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
