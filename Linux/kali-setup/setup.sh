@@ -30,12 +30,12 @@ sudo update-grub
 
 echo "[+] Downloading config archive..."
 
-curl -L https://raw.githubusercontent.com/Malospaall/tools/main/Linux/kali-setup/kali-config.tar.gz -o /tmp/kali-config.tar.gz
+curl -L https://raw.githubusercontent.com/Malospaall/tools/main/Linux/kali-setup/kde-config.tar.gz -o /tmp/kde-config.tar.gz
 
 echo "[+] Extracting configs..."
 
-tar -xzf /tmp/kali-config.tar.gz -C ~
+tar -xzf /tmp/kde-config.tar.gz -C ~
 
-rm /tmp/kali-config.tar.gz
+rm /tmp/kde-config.tar.gz
 
 echo "[+] Setup completed."
