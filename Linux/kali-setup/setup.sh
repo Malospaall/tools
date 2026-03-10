@@ -30,7 +30,7 @@ sudo update-grub
 
 echo "[+] Downloading config archive..."
 
-curl -L https://raw.githubusercontent.com/Malospaall/tools/main/Linux/kali-bootstrap/kali-config.tar.gz -o /tmp/kali-config.tar.gz
+curl -L https://raw.githubusercontent.com/Malospaall/tools/main/Linux/kali-setup/kali-config.tar.gz -o /tmp/kali-config.tar.gz
 
 echo "[+] Extracting configs..."
 
