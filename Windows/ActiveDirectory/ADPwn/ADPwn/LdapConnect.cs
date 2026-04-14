@@ -9,7 +9,7 @@ namespace ADPwn
         {
             string ldapPath = "LDAP://" + domain + "/DC=" + domain.Replace(".", ",DC=");
 
-            return new DirectoryEntry(ldapPath, username, password, AuthenticationTypes.Secure);
+            return new DirectoryEntry(ldapPath, username, password, AuthenticationTypes.None);
         }
         
         // Метод для соединения с конфигурационным разделом
@@ -20,7 +20,7 @@ namespace ADPwn
             string dn = dcParts.Length > 2 ? "DC=" + string.Join(",DC=", dcParts, dcParts.Length - 2, 2) : "DC=" + string.Join(",DC=", dcParts);
             string ldapPath = $"LDAP://{domain}/CN=Configuration,{dn}";
             
-            return new DirectoryEntry(ldapPath, username, password, AuthenticationTypes.Secure);
+            return new DirectoryEntry(ldapPath, username, password, AuthenticationTypes.None);
         }
         
         // Метод для поиск групп текущего пользователя
@@ -28,7 +28,7 @@ namespace ADPwn
         {
             string ldapPath = $"LDAP://{domain}/{dn}";
 
-            return new DirectoryEntry(ldapPath, username, password, AuthenticationTypes.Secure);
+            return new DirectoryEntry(ldapPath, username, password, AuthenticationTypes.None);
         }
     }
 }
