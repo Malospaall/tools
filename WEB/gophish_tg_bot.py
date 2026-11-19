@@ -30,6 +30,10 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s"
 )
+
+for logger_name in ("httpx", "httpcore"):
+    logging.getLogger(logger_name).setLevel(logging.WARNING)
+
 log = logging.getLogger("gophish-monitor")
 
 
